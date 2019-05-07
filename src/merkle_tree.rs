@@ -1,3 +1,5 @@
+use crate::helper::calculate_tree_size;
+
 /// Index position of the Node in tree.
 pub type NodeId = usize;
 
@@ -9,14 +11,18 @@ pub struct MerkleTree<T> {
 impl<T> MerkleTree<T> {
     /// Constructor that builds a whole tree given a list of values.
     pub fn new(input: &Vec<T>) -> MerkleTree<&T> {
+        // Calculate tree size.
+        let tree_size = calculate_tree_size(input.len() as u64);
+
         // Create root.
         let root = Node::new();
-        let nodes = vec![root];
+        let mut nodes = Vec::with_capacity(tree_size as usize);
+        nodes.push(root);
 
         // Create merkle tree and add all leafs.
         let mut merkle_tree = MerkleTree { nodes };
 
-        // TODO: use another iterator that doesn't expect a return?
+        // Add all the leafs.
         for x in input.iter() {
             merkle_tree.add_leaf(x);
         }
@@ -104,9 +110,24 @@ impl<T> MerkleTree<T> {
                 (None, None) => {
                     self.nodes[left_id].sibling_right = Some(right_id);
                     self.nodes[right_id].sibling_left = Some(left_id);
+                    println!("len(): {}", self.nodes.len());
+                    println!("right id + 1: {}", right_id + 1);
+                    // if (right_id + 1) < self.nodes.len() {
+                    // self.nodes[right_id].sibling_right = Some(right_id + 1);
+                    // self.nodes[right_id + 1].sibling_left = Some(right_id);
+                    // }
                 }
                 _ => {}
             }
+
+            if left_id != (self.nodes.len() - 1) {
+                self.nodes[left_id].sibling_right = Some(right_id);
+                self.nodes[right_id].sibling_left = Some(left_id);
+            }
+            // TODO: check if the parent can reference a right sibling.
+            // if (right_id + 1) < self.nodes.len() && self.nodes[right_id].sibling_right == None {
+            //   self.nodes[right_id].sibling_right = Some(right_id + 1)
+            // }
 
             // Create parent and assign child ids to the parent.
             let mut parent = Node::<T>::new();
@@ -244,7 +265,6 @@ mod merkle_tree {
     #[test]
     fn four_leaf_tree_1() {
         // Create four leaf nodes.
-        // node_0 will be the parent to node_2, node_3.
         //              node_0
         //           /          \
         //          /            \
@@ -255,6 +275,9 @@ mod merkle_tree {
 
         let input = vec![1, 2, 3, 4];
         let merkle_tree = MerkleTree::new(&input);
+
+        // Assert the tree size.
+        assert_eq!(merkle_tree.nodes.len(), 7);
 
         // Assert the leaf siblings.
         assert_eq!(merkle_tree.nodes[1].sibling_left, None);
@@ -286,5 +309,73 @@ mod merkle_tree {
 
         assert_eq!(merkle_tree.nodes[0].child_left.unwrap(), 5);
         assert_eq!(merkle_tree.nodes[0].child_right.unwrap(), 6);
+    }
+
+    #[test]
+    fn eight_leaf_tree_1() {
+        // Create eight leaf nodes.
+        //                               node_0
+        //                    /                        \
+        //                   /                          \
+        //                  /                            \
+        //                 /                              \
+        //              node_13                         node_14
+        //           /          \                  /             \
+        //          /            \                /               \
+        //      node_9          node_10         node_11         node_12
+        //      /    \         /     \         /      \       /      \
+        //     /      \       /       \       /        \     /        \
+        //  node_1   node_2  node_3  node_4  node_5  node_6 node_7  node_8
+
+        let input = vec![1, 2, 3, 4, 5, 6, 7, 8];
+        let merkle_tree = MerkleTree::new(&input);
+
+        // Assert the leaf siblings.
+        assert_eq!(merkle_tree.nodes[1].sibling_left, None);
+        assert_eq!(merkle_tree.nodes[1].sibling_right.unwrap(), 2);
+        assert_eq!(merkle_tree.nodes[2].sibling_left.unwrap(), 1);
+        assert_eq!(merkle_tree.nodes[2].sibling_right.unwrap(), 3);
+        assert_eq!(merkle_tree.nodes[3].sibling_left.unwrap(), 2);
+        assert_eq!(merkle_tree.nodes[3].sibling_right.unwrap(), 4);
+        assert_eq!(merkle_tree.nodes[4].sibling_right.unwrap(), 5);
+        assert_eq!(merkle_tree.nodes[5].sibling_left.unwrap(), 4);
+        assert_eq!(merkle_tree.nodes[5].sibling_right.unwrap(), 6);
+        assert_eq!(merkle_tree.nodes[6].sibling_left.unwrap(), 5);
+        assert_eq!(merkle_tree.nodes[6].sibling_right.unwrap(), 7);
+        assert_eq!(merkle_tree.nodes[7].sibling_left.unwrap(), 6);
+        assert_eq!(merkle_tree.nodes[7].sibling_right.unwrap(), 8);
+        assert_eq!(merkle_tree.nodes[8].sibling_left.unwrap(), 7);
+        assert_eq!(merkle_tree.nodes[8].sibling_right, None);
+
+        // Assert the parents.
+        assert_eq!(merkle_tree.nodes[1].parent.unwrap(), 9);
+        assert_eq!(merkle_tree.nodes[2].parent.unwrap(), 9);
+        assert_eq!(merkle_tree.nodes[3].parent.unwrap(), 10);
+        assert_eq!(merkle_tree.nodes[4].parent.unwrap(), 10);
+        assert_eq!(merkle_tree.nodes[5].parent.unwrap(), 11);
+        assert_eq!(merkle_tree.nodes[6].parent.unwrap(), 11);
+        assert_eq!(merkle_tree.nodes[7].parent.unwrap(), 12);
+        assert_eq!(merkle_tree.nodes[8].parent.unwrap(), 12);
+
+        assert_eq!(merkle_tree.nodes[9].sibling_left, None);
+        // assert_eq!(merkle_tree.nodes[9].parent.unwrap(), 13);
+        // assert_eq!(merkle_tree.nodes[9].sibling_right.unwrap(), 10);
+        // assert_eq!(merkle_tree.nodes[10].sibling_left.unwrap(), 9);
+        // assert_eq!(merkle_tree.nodes[10].sibling_right.unwrap(), 11);
+        // assert_eq!(merkle_tree.nodes[11].sibling_left.unwrap(), 10);
+        // assert_eq!(merkle_tree.nodes[11].sibling_right.unwrap(), 12);
+        // assert_eq!(merkle_tree.nodes[5].sibling_right.unwrap(), 6);
+        // assert_eq!(merkle_tree.nodes[5].child_left.unwrap(), 1);
+        // assert_eq!(merkle_tree.nodes[5].child_right.unwrap(), 2);
+        // assert_eq!(merkle_tree.nodes[5].parent.unwrap(), 0);
+        //
+        // assert_eq!(merkle_tree.nodes[6].sibling_left.unwrap(), 5);
+        // assert_eq!(merkle_tree.nodes[6].sibling_right, None);
+        // assert_eq!(merkle_tree.nodes[6].child_left.unwrap(), 3);
+        // assert_eq!(merkle_tree.nodes[6].child_right.unwrap(), 4);
+        // assert_eq!(merkle_tree.nodes[6].parent.unwrap(), 0);
+        //
+        // assert_eq!(merkle_tree.nodes[0].child_left.unwrap(), 5);
+        // assert_eq!(merkle_tree.nodes[0].child_right.unwrap(), 6);
     }
 }
