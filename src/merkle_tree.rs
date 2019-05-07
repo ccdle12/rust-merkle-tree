@@ -18,7 +18,7 @@ impl<T> MerkleTree<T> {
 
         // TODO: use another iterator that doesn't expect a return?
         input.iter().map(|x| merkle_tree.add_leaf(x));
-        merkle_tree.build_parent_nodes();
+        merkle_tree.buld_parents();
 
         merkle_tree
     }
@@ -85,7 +85,7 @@ impl<T> MerkleTree<T> {
         }
     }
 
-    fn build_parent_nodes(&mut self) {
+    fn buld_parents(&mut self) {
         // 1. Iterate from root + 1,
         // 2. Create a node add it's left and right node[i] and node[i+1].
         // 3. Update node[i] and node[i+1] to store the parent node index.
@@ -211,7 +211,7 @@ mod merkle_tree {
         assert_eq!(val, "hello");
 
         // Build the parent nodes.
-        merkle_tree.build_parent_nodes();
+        merkle_tree.buld_parents();
 
         // Check that both nodes are pointing to the root as their parent.
         assert!(merkle_tree.nodes[1].parent != None);
