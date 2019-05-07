@@ -239,5 +239,15 @@ mod merkle_tree {
 
         let input = vec![1, 2, 3, 4];
         let merkle_tree = MerkleTree::new(&input);
+
+        // Asser the leaf siblings.
+        assert!(merkle_tree.nodes[1].sibling_left == None);
+        assert!(merkle_tree.nodes[1].sibling_right.unwrap() == 2);
+        assert!(merkle_tree.nodes[2].sibling_left.unwrap() == 1);
+        assert!(merkle_tree.nodes[2].sibling_right.unwrap() == 3);
+        assert!(merkle_tree.nodes[3].sibling_left.unwrap() == 2);
+        assert!(merkle_tree.nodes[3].sibling_right.unwrap() == 4);
+        assert!(merkle_tree.nodes[4].sibling_right == None);
+        assert!(merkle_tree.nodes[4].sibling_left.unwrap() == 3);
     }
 }
