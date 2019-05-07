@@ -7,9 +7,25 @@ pub struct MerkleTree<T> {
 }
 
 impl<T> MerkleTree<T> {
+    /// Constructor that builds a whole tree given a list of values.
+    pub fn new(input: &Vec<T>) -> MerkleTree<&T> {
+        // Create root.
+        let root = Node::new();
+        let nodes = vec![root];
+
+        // Create merkle tree and add all leafs.
+        let mut merkle_tree = MerkleTree { nodes };
+
+        // TODO: use another iterator that doesn't expect a return?
+        input.iter().map(|x| merkle_tree.add_leaf_node(x));
+        merkle_tree.build_parent_nodes();
+
+        merkle_tree
+    }
+
     /// Constructor that will return a MerkleTree<T> with the root initialised
-    /// to a zero value.
-    pub fn new() -> MerkleTree<T> {
+    /// to a zero value with no nodes and leafs.
+    pub fn new_empty() -> MerkleTree<T> {
         let root = Node::new();
         let nodes = vec![root];
 
@@ -159,7 +175,7 @@ mod merkle_tree {
         //     /      \
         //  node_1   node_2
 
-        let mut merkle_tree: MerkleTree<String> = MerkleTree::new();
+        let mut merkle_tree: MerkleTree<String> = MerkleTree::new_empty();
 
         let node_id_1 = merkle_tree.add_leaf_node("hello".to_string());
         let node_id_2 = merkle_tree.add_leaf_node("world".to_string());
@@ -208,5 +224,20 @@ mod merkle_tree {
 
         let child_right = merkle_tree.get_child_right(0);
         assert!(child_right.unwrap().value.as_ref().unwrap() == "world");
+    }
+
+    fn four_leaf_tree_1() {
+        // Create four leaf nodes.
+        // node_0 will be the parent to node_2, node_3.
+        //              node_0
+        //           /          \
+        //          /            \
+        //      node_5          node_6
+        //      /    \         /     \
+        //     /      \       /       \
+        //  node_1   node_2  node_3  node_4
+
+        let input = vec![1, 2, 3, 4];
+        let merkle_tree = MerkleTree::new(&input);
     }
 }
