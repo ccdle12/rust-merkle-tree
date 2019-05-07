@@ -17,7 +17,7 @@ impl<T> MerkleTree<T> {
         let mut merkle_tree = MerkleTree { nodes };
 
         // TODO: use another iterator that doesn't expect a return?
-        input.iter().map(|x| merkle_tree.add_leaf_node(x));
+        input.iter().map(|x| merkle_tree.add_leaf(x));
         merkle_tree.build_parent_nodes();
 
         merkle_tree
@@ -33,7 +33,7 @@ impl<T> MerkleTree<T> {
     }
 
     /// Adds a Leaf Node as leaf in the Merkle Tree.
-    fn add_leaf_node(&mut self, val: T) -> NodeId {
+    fn add_leaf(&mut self, val: T) -> NodeId {
         let index = self.nodes.len();
         let mut node = Node::new();
 
@@ -177,8 +177,8 @@ mod merkle_tree {
 
         let mut merkle_tree: MerkleTree<String> = MerkleTree::new_empty();
 
-        let node_id_1 = merkle_tree.add_leaf_node("hello".to_string());
-        let node_id_2 = merkle_tree.add_leaf_node("world".to_string());
+        let node_id_1 = merkle_tree.add_leaf("hello".to_string());
+        let node_id_2 = merkle_tree.add_leaf("world".to_string());
 
         assert_eq!(merkle_tree.nodes.len(), 3);
 
