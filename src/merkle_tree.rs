@@ -17,8 +17,10 @@ impl<T> MerkleTree<T> {
         let mut merkle_tree = MerkleTree { nodes };
 
         // TODO: use another iterator that doesn't expect a return?
-        input.iter().map(|x| merkle_tree.add_leaf(x));
-        merkle_tree.buld_parents();
+        for x in input.iter() {
+            merkle_tree.add_leaf(x);
+        }
+        merkle_tree.build_parents();
 
         merkle_tree
     }
@@ -85,25 +87,34 @@ impl<T> MerkleTree<T> {
         }
     }
 
-    fn buld_parents(&mut self) {
-        // 1. Iterate from root + 1,
-        // 2. Create a node add it's left and right node[i] and node[i+1].
-        // 3. Update node[i] and node[i+1] to store the parent node index.
-        // 4. Push the Node.
-        // 5. If node[i+1].right_sibling is None, find the left most node?
-        let mut i: NodeId = 1;
+    fn build_parents(&mut self) {
+        let mut left_id: NodeId = 1;
         let mut row_count = 2;
         loop {
-            let current_id = i + 1;
-            let node_id: NodeId = self.nodes.len();
+            let right_id = left_id + 1;
+            let parent_id: NodeId = self.nodes.len();
+
+            // Check that we are at the head of a new row. The new row will be
+            // a parent row, so each parent should not have a left or right sibling
+            // assigned yet.
+            match (
+                self.nodes[left_id].sibling_left,
+                self.nodes[left_id].sibling_right,
+            ) {
+                (None, None) => {
+                    self.nodes[left_id].sibling_right = Some(right_id);
+                    self.nodes[right_id].sibling_left = Some(left_id);
+                }
+                _ => {}
+            }
 
             // Create parent and assign child ids to the parent.
-            let mut node = Node::<T>::new();
-            node.child_left = Some(i);
-            node.child_right = Some(current_id);
+            let mut parent = Node::<T>::new();
+            parent.child_left = Some(left_id);
+            parent.child_right = Some(right_id);
 
             // Check if we have reached the end of the row.
-            match self.nodes[current_id].sibling_right {
+            match self.nodes[right_id].sibling_right {
                 Some(_a) => {
                     // Increment the row count if there are more siblings.
                     row_count += 2;
@@ -114,23 +125,27 @@ impl<T> MerkleTree<T> {
             // Check that the parent should be the root.
             if row_count == 2 {
                 // Assign the node id of parent to current nodes.
-                self.nodes[i].parent = Some(0);
-                self.nodes[current_id].parent = Some(0);
-                self.nodes[0] = node;
-            } else {
-                self.nodes[i].parent = Some(node_id);
-                self.nodes[current_id].parent = Some(node_id);
-                self.nodes.push(node);
+                self.nodes[left_id].parent = Some(0);
+                self.nodes[right_id].parent = Some(0);
+                self.nodes[0] = parent;
+                break;
             }
 
-            // Check if we have reached the end of the row.
-            match self.nodes[current_id].sibling_right {
+            // Assign parents not at root.
+            self.nodes[left_id].parent = Some(parent_id);
+            self.nodes[right_id].parent = Some(parent_id);
+            self.nodes.push(parent);
+
+            // Reset the row count if we are at the end.
+            match self.nodes[right_id].sibling_right {
                 Some(_a) => {}
-                None => break,
+                None => {
+                    row_count = 2;
+                }
             }
 
-            // Increment the indexes.
-            i += 1;
+            // Increment the index.
+            left_id += 2;
         }
     }
 }
@@ -200,7 +215,7 @@ mod merkle_tree {
         // Assert the left and right sibling for node_id_2.
         // Right sibling should be None.
         match merkle_tree.get_sibling_right(node_id_2) {
-            Some(a) => assert!(false),
+            Some(_a) => assert!(false),
             None => assert!(true),
         }
 
@@ -211,7 +226,7 @@ mod merkle_tree {
         assert_eq!(val, "hello");
 
         // Build the parent nodes.
-        merkle_tree.buld_parents();
+        merkle_tree.build_parents();
 
         // Check that both nodes are pointing to the root as their parent.
         assert!(merkle_tree.nodes[1].parent != None);
@@ -226,6 +241,7 @@ mod merkle_tree {
         assert!(child_right.unwrap().value.as_ref().unwrap() == "world");
     }
 
+    #[test]
     fn four_leaf_tree_1() {
         // Create four leaf nodes.
         // node_0 will be the parent to node_2, node_3.
@@ -241,13 +257,34 @@ mod merkle_tree {
         let merkle_tree = MerkleTree::new(&input);
 
         // Assert the leaf siblings.
-        assert!(merkle_tree.nodes[1].sibling_left == None);
-        assert!(merkle_tree.nodes[1].sibling_right.unwrap() == 2);
-        assert!(merkle_tree.nodes[2].sibling_left.unwrap() == 1);
-        assert!(merkle_tree.nodes[2].sibling_right.unwrap() == 3);
-        assert!(merkle_tree.nodes[3].sibling_left.unwrap() == 2);
-        assert!(merkle_tree.nodes[3].sibling_right.unwrap() == 4);
-        assert!(merkle_tree.nodes[4].sibling_right == None);
-        assert!(merkle_tree.nodes[4].sibling_left.unwrap() == 3);
+        assert_eq!(merkle_tree.nodes[1].sibling_left, None);
+        assert_eq!(merkle_tree.nodes[1].sibling_right.unwrap(), 2);
+        assert_eq!(merkle_tree.nodes[2].sibling_left.unwrap(), 1);
+        assert_eq!(merkle_tree.nodes[2].sibling_right.unwrap(), 3);
+        assert_eq!(merkle_tree.nodes[3].sibling_left.unwrap(), 2);
+        assert_eq!(merkle_tree.nodes[3].sibling_right.unwrap(), 4);
+        assert_eq!(merkle_tree.nodes[4].sibling_right, None);
+        assert_eq!(merkle_tree.nodes[4].sibling_left.unwrap(), 3);
+
+        // Assert the parents.
+        assert_eq!(merkle_tree.nodes[1].parent.unwrap(), 5);
+        assert_eq!(merkle_tree.nodes[2].parent.unwrap(), 5);
+        assert_eq!(merkle_tree.nodes[3].parent.unwrap(), 6);
+        assert_eq!(merkle_tree.nodes[4].parent.unwrap(), 6);
+
+        assert_eq!(merkle_tree.nodes[5].sibling_left, None);
+        assert_eq!(merkle_tree.nodes[5].sibling_right.unwrap(), 6);
+        assert_eq!(merkle_tree.nodes[5].child_left.unwrap(), 1);
+        assert_eq!(merkle_tree.nodes[5].child_right.unwrap(), 2);
+        assert_eq!(merkle_tree.nodes[5].parent.unwrap(), 0);
+
+        assert_eq!(merkle_tree.nodes[6].sibling_left.unwrap(), 5);
+        assert_eq!(merkle_tree.nodes[6].sibling_right, None);
+        assert_eq!(merkle_tree.nodes[6].child_left.unwrap(), 3);
+        assert_eq!(merkle_tree.nodes[6].child_right.unwrap(), 4);
+        assert_eq!(merkle_tree.nodes[6].parent.unwrap(), 0);
+
+        assert_eq!(merkle_tree.nodes[0].child_left.unwrap(), 5);
+        assert_eq!(merkle_tree.nodes[0].child_right.unwrap(), 6);
     }
 }
