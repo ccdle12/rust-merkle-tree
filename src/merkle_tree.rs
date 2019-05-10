@@ -15,9 +15,9 @@ impl<T> MerkleTree<T> {
         let tree_size = calculate_tree_size(input.len() as u64);
 
         // Create root.
-        let root = Node::new();
+        // let root = Node::new();
         let mut nodes = Vec::with_capacity(tree_size as usize);
-        nodes.push(root);
+        nodes.push(Node::new());
 
         // Create merkle tree and add all leafs.
         let mut merkle_tree = MerkleTree { nodes };
@@ -34,8 +34,8 @@ impl<T> MerkleTree<T> {
     /// Constructor that will return a MerkleTree<T> with the root initialised
     /// to a zero value with no nodes and leafs.
     pub fn new_empty() -> MerkleTree<T> {
-        let root = Node::new();
-        let nodes = vec![root];
+        // let root = Node::new();
+        let nodes = vec![Node::new()];
 
         MerkleTree { nodes }
     }
@@ -95,7 +95,8 @@ impl<T> MerkleTree<T> {
 
     fn build_parents(&mut self) {
         let mut left_id: NodeId = 1;
-        let mut row_count = 2;
+        let capacity = self.nodes.capacity();
+
         loop {
             let right_id = left_id + 1;
             let parent_id: NodeId = self.nodes.len();
@@ -110,8 +111,6 @@ impl<T> MerkleTree<T> {
                 (None, None) => {
                     self.nodes[left_id].sibling_right = Some(right_id);
                     self.nodes[right_id].sibling_left = Some(left_id);
-                    println!("len(): {}", self.nodes.len());
-                    println!("right id + 1: {}", right_id + 1);
                     // if (right_id + 1) < self.nodes.len() {
                     // self.nodes[right_id].sibling_right = Some(right_id + 1);
                     // self.nodes[right_id + 1].sibling_left = Some(right_id);
@@ -120,10 +119,10 @@ impl<T> MerkleTree<T> {
                 _ => {}
             }
 
-            if left_id != (self.nodes.len() - 1) {
-                self.nodes[left_id].sibling_right = Some(right_id);
-                self.nodes[right_id].sibling_left = Some(left_id);
-            }
+            // if left_id != (self.nodes.len() - 1) {
+            // self.nodes[left_id].sibling_right = Some(right_id);
+            // self.nodes[right_id].sibling_left = Some(left_id);
+            // }
             // TODO: check if the parent can reference a right sibling.
             // if (right_id + 1) < self.nodes.len() && self.nodes[right_id].sibling_right == None {
             //   self.nodes[right_id].sibling_right = Some(right_id + 1)
@@ -135,16 +134,16 @@ impl<T> MerkleTree<T> {
             parent.child_right = Some(right_id);
 
             // Check if we have reached the end of the row.
-            match self.nodes[right_id].sibling_right {
-                Some(_a) => {
-                    // Increment the row count if there are more siblings.
-                    row_count += 2;
-                }
-                None => {}
-            }
-
+            // match self.nodes[right_id].sibling_right {
+            // Some(_a) => {
+            // Increment the row count if there are more siblings.
+            // row_count += 2;
+            // }
+            // None => {}
+            // }
+            //
             // Check that the parent should be the root.
-            if row_count == 2 {
+            if right_id == capacity - 1 {
                 // Assign the node id of parent to current nodes.
                 self.nodes[left_id].parent = Some(0);
                 self.nodes[right_id].parent = Some(0);
@@ -158,12 +157,12 @@ impl<T> MerkleTree<T> {
             self.nodes.push(parent);
 
             // Reset the row count if we are at the end.
-            match self.nodes[right_id].sibling_right {
-                Some(_a) => {}
-                None => {
-                    row_count = 2;
-                }
-            }
+            // match self.nodes[right_id].sibling_right {
+            // Some(_a) => {}
+            // None => {
+            // row_count = 2;
+            // }
+            // }
 
             // Increment the index.
             left_id += 2;
@@ -211,11 +210,13 @@ mod merkle_tree {
         //     /      \
         //  node_1   node_2
 
-        let mut merkle_tree: MerkleTree<String> = MerkleTree::new_empty();
+        // let mut merkle_tree: MerkleTree<String> = MerkleTree::new_empty();
+        //
 
-        let node_id_1 = merkle_tree.add_leaf("hello".to_string());
-        let node_id_2 = merkle_tree.add_leaf("world".to_string());
-
+        // let node_id_1 = merkle_tree.add_leaf("hello".to_string());
+        // let node_id_2 = merkle_tree.add_leaf("world".to_string());
+        let input = vec!["hello", "world", "!"];
+        let merkle_tree = MerkleTree::new(&input);
         assert_eq!(merkle_tree.nodes.len(), 3);
 
         // Node Id 1 should have no left sibling since it is the far left most
@@ -358,7 +359,7 @@ mod merkle_tree {
         assert_eq!(merkle_tree.nodes[8].parent.unwrap(), 12);
 
         assert_eq!(merkle_tree.nodes[9].sibling_left, None);
-        // assert_eq!(merkle_tree.nodes[9].parent.unwrap(), 13);
+        assert_eq!(merkle_tree.nodes[9].parent.unwrap(), 13);
         // assert_eq!(merkle_tree.nodes[9].sibling_right.unwrap(), 10);
         // assert_eq!(merkle_tree.nodes[10].sibling_left.unwrap(), 9);
         // assert_eq!(merkle_tree.nodes[10].sibling_right.unwrap(), 11);
